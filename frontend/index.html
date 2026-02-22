@@ -1,0 +1,1093 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Tradecraft — Agentic Trading System</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;0,400;0,500;0,600;1,300;1,400&family=DM+Mono:wght@300;400;500&family=Instrument+Sans:wght@400;500;600&display=swap" rel="stylesheet">
+
+<style>
+  :root {
+    --black: #0a0a08;
+    --dark: #111110;
+    --card: #161614;
+    --border: rgba(255,255,255,0.07);
+    --cream: #e8e0cc;
+    --cream-dim: rgba(232,224,204,0.6);
+    --green: #5aff91;
+    --green-dim: rgba(90,255,145,0.15);
+    --red: #ff5a5a;
+    --red-dim: rgba(255,90,90,0.12);
+    --amber: #ffb344;
+    --amber-dim: rgba(255,179,68,0.12);
+    --white: #f5f2eb;
+    --muted: rgba(245,242,235,0.38);
+    --font-display: 'Cormorant Garamond', Georgia, serif;
+    --font-body: 'Instrument Sans', sans-serif;
+    --font-mono: 'DM Mono', monospace;
+  }
+
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  html { scroll-behavior: smooth; }
+
+  body {
+    background: var(--black);
+    color: var(--white);
+    font-family: var(--font-body);
+    font-size: 14px;
+    line-height: 1.6;
+    overflow-x: hidden;
+    cursor: default;
+  }
+
+  /* ── Custom scrollbar ── */
+  ::-webkit-scrollbar { width: 4px; }
+  ::-webkit-scrollbar-track { background: var(--black); }
+  ::-webkit-scrollbar-thumb { background: var(--border); border-radius: 2px; }
+
+  /* ── NAV ── */
+  nav {
+    position: fixed; top: 0; left: 0; right: 0; z-index: 100;
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 20px 48px;
+    border-bottom: 1px solid var(--border);
+    background: rgba(10,10,8,0.85);
+    backdrop-filter: blur(20px);
+  }
+
+  .nav-logo {
+    font-family: var(--font-display);
+    font-size: 22px;
+    font-weight: 500;
+    letter-spacing: 0.04em;
+    color: var(--cream);
+  }
+  .nav-logo span { color: var(--muted); font-style: italic; font-weight: 300; }
+
+  .nav-links { display: flex; gap: 32px; }
+  .nav-links a {
+    font-family: var(--font-mono);
+    font-size: 11px;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    color: var(--muted);
+    text-decoration: none;
+    transition: color 0.2s;
+  }
+  .nav-links a:hover { color: var(--cream); }
+
+  .nav-badge {
+    display: flex; align-items: center; gap: 8px;
+    font-family: var(--font-mono); font-size: 11px;
+    letter-spacing: 0.08em; color: var(--muted);
+  }
+  .live-dot {
+    width: 6px; height: 6px; border-radius: 50%;
+    background: var(--green);
+    box-shadow: 0 0 8px var(--green);
+    animation: pulse 2s ease-in-out infinite;
+  }
+  @keyframes pulse { 0%,100% { opacity: 1; } 50% { opacity: 0.4; } }
+
+  /* ── HERO ── */
+  .hero {
+    min-height: 100vh;
+    display: flex; flex-direction: column;
+    justify-content: flex-end; padding: 0 48px 80px;
+    position: relative; overflow: hidden;
+    padding-top: 80px;
+  }
+
+  .hero-bg {
+    position: absolute; inset: 0;
+    background:
+      radial-gradient(ellipse 60% 50% at 80% 20%, rgba(90,255,145,0.04) 0%, transparent 60%),
+      radial-gradient(ellipse 40% 60% at 10% 80%, rgba(232,224,204,0.03) 0%, transparent 50%),
+      linear-gradient(180deg, var(--black) 0%, #0c0c0a 100%);
+  }
+
+  .hero-grid {
+    position: absolute; inset: 0;
+    background-image:
+      linear-gradient(rgba(255,255,255,0.02) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(255,255,255,0.02) 1px, transparent 1px);
+    background-size: 80px 80px;
+    mask-image: linear-gradient(180deg, transparent 0%, rgba(0,0,0,0.3) 40%, transparent 100%);
+  }
+
+  .hero-eyebrow {
+    position: relative;
+    display: flex; align-items: center; gap: 12px;
+    font-family: var(--font-mono); font-size: 11px;
+    letter-spacing: 0.14em; text-transform: uppercase;
+    color: var(--green); margin-bottom: 32px;
+    animation: fadeUp 0.8s ease both;
+  }
+  .hero-eyebrow::before {
+    content: ''; display: block;
+    width: 32px; height: 1px; background: var(--green);
+  }
+
+  .hero-headline {
+    position: relative;
+    font-family: var(--font-display);
+    font-size: clamp(64px, 8vw, 120px);
+    font-weight: 300;
+    line-height: 0.95;
+    letter-spacing: -0.02em;
+    color: var(--cream);
+    margin-bottom: 12px;
+    animation: fadeUp 0.8s 0.1s ease both;
+  }
+  .hero-headline em {
+    font-style: italic; color: var(--white);
+    font-weight: 300;
+  }
+
+  .hero-sub {
+    position: relative;
+    font-family: var(--font-display);
+    font-size: clamp(32px, 4vw, 56px);
+    font-weight: 300; font-style: italic;
+    color: var(--muted);
+    line-height: 1.1;
+    margin-bottom: 48px;
+    animation: fadeUp 0.8s 0.2s ease both;
+  }
+
+  .hero-actions {
+    position: relative;
+    display: flex; gap: 16px; flex-wrap: wrap;
+    animation: fadeUp 0.8s 0.3s ease both;
+  }
+
+  .btn-primary {
+    display: inline-flex; align-items: center; gap: 10px;
+    padding: 14px 28px;
+    border: 1px solid var(--cream);
+    border-radius: 100px;
+    background: transparent;
+    color: var(--cream);
+    font-family: var(--font-mono); font-size: 12px;
+    letter-spacing: 0.1em; text-transform: uppercase;
+    cursor: pointer; transition: all 0.3s ease;
+    text-decoration: none;
+  }
+  .btn-primary:hover { background: var(--cream); color: var(--black); }
+  .btn-primary .dot { width: 5px; height: 5px; border-radius: 50%; background: currentColor; }
+
+  .btn-ghost {
+    display: inline-flex; align-items: center; gap: 10px;
+    padding: 14px 28px;
+    border: 1px solid var(--border);
+    border-radius: 100px;
+    background: transparent;
+    color: var(--muted);
+    font-family: var(--font-mono); font-size: 12px;
+    letter-spacing: 0.1em; text-transform: uppercase;
+    cursor: pointer; transition: all 0.3s ease;
+    text-decoration: none;
+  }
+  .btn-ghost:hover { border-color: var(--cream-dim); color: var(--cream); }
+
+  .hero-stats {
+    position: absolute; right: 48px; bottom: 80px;
+    display: flex; flex-direction: column; gap: 24px;
+    animation: fadeUp 0.8s 0.4s ease both;
+  }
+  .hero-stat { text-align: right; }
+  .hero-stat-value {
+    font-family: var(--font-display);
+    font-size: 36px; font-weight: 300;
+    color: var(--cream); line-height: 1;
+  }
+  .hero-stat-label {
+    font-family: var(--font-mono); font-size: 10px;
+    letter-spacing: 0.12em; text-transform: uppercase;
+    color: var(--muted); margin-top: 4px;
+  }
+
+  @keyframes fadeUp {
+    from { opacity: 0; transform: translateY(24px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
+
+  /* ── SECTION SHARED ── */
+  section { padding: 120px 48px; position: relative; }
+  section + section { border-top: 1px solid var(--border); }
+
+  .section-label {
+    font-family: var(--font-mono); font-size: 10px;
+    letter-spacing: 0.16em; text-transform: uppercase;
+    color: var(--muted); margin-bottom: 20px;
+    display: flex; align-items: center; gap: 12px;
+  }
+  .section-label::before {
+    content: ''; display: block; width: 20px; height: 1px;
+    background: var(--muted);
+  }
+
+  .section-title {
+    font-family: var(--font-display);
+    font-size: clamp(40px, 5vw, 72px);
+    font-weight: 300; line-height: 1.05;
+    color: var(--cream); letter-spacing: -0.01em;
+  }
+  .section-title em { font-style: italic; color: var(--muted); }
+
+  /* ── METRICS STRIP ── */
+  .metrics-strip {
+    display: grid; grid-template-columns: repeat(4, 1fr);
+    gap: 0; border: 1px solid var(--border);
+    border-radius: 2px; overflow: hidden;
+    margin-bottom: 80px;
+  }
+  .metric-cell {
+    padding: 40px 36px;
+    border-right: 1px solid var(--border);
+    transition: background 0.3s;
+  }
+  .metric-cell:last-child { border-right: none; }
+  .metric-cell:hover { background: rgba(255,255,255,0.02); }
+  .metric-value {
+    font-family: var(--font-display);
+    font-size: 52px; font-weight: 300;
+    color: var(--cream); line-height: 1;
+    margin-bottom: 8px;
+  }
+  .metric-value.green { color: var(--green); }
+  .metric-value.amber { color: var(--amber); }
+  .metric-label {
+    font-family: var(--font-mono); font-size: 10px;
+    letter-spacing: 0.12em; text-transform: uppercase;
+    color: var(--muted);
+  }
+
+  /* ── PIPELINE SECTION ── */
+  .pipeline-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 48px; align-items: start;
+  }
+
+  .pipeline-input-panel { }
+  .pipeline-input-panel h3 {
+    font-family: var(--font-display);
+    font-size: 28px; font-weight: 300;
+    color: var(--cream); margin-bottom: 32px;
+  }
+
+  .input-group { margin-bottom: 16px; }
+  .input-group label {
+    display: block;
+    font-family: var(--font-mono); font-size: 10px;
+    letter-spacing: 0.12em; text-transform: uppercase;
+    color: var(--muted); margin-bottom: 8px;
+  }
+  .input-group input, .input-group select {
+    width: 100%; padding: 14px 18px;
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: 2px;
+    color: var(--white);
+    font-family: var(--font-mono); font-size: 13px;
+    outline: none; transition: border-color 0.2s;
+    -webkit-appearance: none;
+  }
+  .input-group input:focus, .input-group select:focus {
+    border-color: rgba(232,224,204,0.3);
+  }
+  .input-group input::placeholder { color: var(--muted); }
+
+  .event-pills {
+    display: flex; flex-wrap: wrap; gap: 8px;
+    margin-bottom: 24px;
+  }
+  .event-pill {
+    padding: 8px 14px;
+    border: 1px solid var(--border);
+    border-radius: 100px;
+    font-family: var(--font-mono); font-size: 10px;
+    letter-spacing: 0.08em;
+    color: var(--muted); cursor: pointer;
+    transition: all 0.2s;
+  }
+  .event-pill:hover { border-color: var(--cream-dim); color: var(--cream); }
+  .event-pill.active { border-color: var(--cream); color: var(--cream); }
+
+  .run-btn {
+    width: 100%; padding: 18px;
+    border: 1px solid var(--cream);
+    border-radius: 2px;
+    background: transparent;
+    color: var(--cream);
+    font-family: var(--font-mono); font-size: 12px;
+    letter-spacing: 0.14em; text-transform: uppercase;
+    cursor: pointer; transition: all 0.3s;
+    display: flex; align-items: center; justify-content: center; gap: 12px;
+    margin-top: 24px;
+  }
+  .run-btn:hover:not(:disabled) { background: var(--cream); color: var(--black); }
+  .run-btn:disabled { opacity: 0.4; cursor: not-allowed; }
+
+  /* ── AGENT THREAD ── */
+  .pipeline-output-panel { }
+
+  .agent-thread { display: flex; flex-direction: column; gap: 0; }
+
+  .agent-card {
+    border: 1px solid var(--border);
+    border-bottom: none;
+    padding: 0;
+    overflow: hidden;
+    transition: border-color 0.3s;
+    opacity: 0.3;
+  }
+  .agent-card:last-child { border-bottom: 1px solid var(--border); }
+  .agent-card.active { opacity: 1; border-color: rgba(232,224,204,0.2); }
+  .agent-card.running { opacity: 1; border-color: var(--amber); }
+  .agent-card.done { opacity: 1; border-color: var(--border); }
+  .agent-card.vetoed { opacity: 1; border-color: var(--red); }
+
+  .agent-header {
+    display: flex; align-items: center; gap: 16px;
+    padding: 18px 24px;
+    cursor: pointer;
+    transition: background 0.2s;
+  }
+  .agent-header:hover { background: rgba(255,255,255,0.02); }
+
+  .agent-icon {
+    width: 32px; height: 32px; border-radius: 50%;
+    border: 1px solid var(--border);
+    display: flex; align-items: center; justify-content: center;
+    font-family: var(--font-mono); font-size: 10px;
+    color: var(--muted); flex-shrink: 0;
+    transition: all 0.3s;
+  }
+  .agent-card.running .agent-icon { border-color: var(--amber); color: var(--amber); animation: spin 1s linear infinite; }
+  .agent-card.done .agent-icon { border-color: var(--green); color: var(--green); }
+  .agent-card.vetoed .agent-icon { border-color: var(--red); color: var(--red); }
+
+  @keyframes spin { to { transform: rotate(360deg); } }
+
+  .agent-name {
+    font-family: var(--font-mono); font-size: 11px;
+    letter-spacing: 0.1em; text-transform: uppercase;
+    color: var(--cream); flex: 1;
+  }
+  .agent-tag {
+    font-family: var(--font-mono); font-size: 10px;
+    padding: 4px 10px; border-radius: 100px;
+    border: 1px solid var(--border);
+    color: var(--muted);
+  }
+  .agent-tag.bearish { border-color: var(--red-dim); color: var(--red); background: var(--red-dim); }
+  .agent-tag.bullish { border-color: var(--green-dim); color: var(--green); background: var(--green-dim); }
+  .agent-tag.approved { border-color: var(--green-dim); color: var(--green); background: var(--green-dim); }
+  .agent-tag.vetoed { border-color: var(--red-dim); color: var(--red); background: var(--red-dim); }
+  .agent-tag.compliant { border-color: var(--green-dim); color: var(--green); background: var(--green-dim); }
+  .agent-tag.warning { border-color: var(--amber-dim); color: var(--amber); background: var(--amber-dim); }
+
+  .agent-body {
+    padding: 0 24px;
+    max-height: 0; overflow: hidden;
+    transition: max-height 0.4s ease, padding 0.3s;
+  }
+  .agent-card.expanded .agent-body {
+    max-height: 600px; padding: 0 24px 20px;
+  }
+
+  .agent-payload {
+    display: grid; grid-template-columns: 1fr 1fr;
+    gap: 8px; padding-top: 16px;
+    border-top: 1px solid var(--border);
+  }
+  .payload-row {
+    display: flex; flex-direction: column; gap: 2px;
+  }
+  .payload-key {
+    font-family: var(--font-mono); font-size: 9px;
+    letter-spacing: 0.1em; text-transform: uppercase;
+    color: var(--muted);
+  }
+  .payload-val {
+    font-family: var(--font-mono); font-size: 12px;
+    color: var(--white); word-break: break-all;
+  }
+  .payload-val.green { color: var(--green); }
+  .payload-val.red { color: var(--red); }
+  .payload-val.amber { color: var(--amber); }
+
+  .connector {
+    width: 1px; height: 20px;
+    background: var(--border); margin: 0 auto;
+  }
+
+  /* ── HOW IT WORKS ── */
+  .agents-explainer {
+    display: grid; grid-template-columns: repeat(5, 1fr);
+    gap: 1px; background: var(--border);
+    border: 1px solid var(--border);
+    margin-top: 64px; border-radius: 2px; overflow: hidden;
+  }
+  .agent-explainer-card {
+    background: var(--dark); padding: 36px 28px;
+    position: relative; overflow: hidden;
+    transition: background 0.3s;
+  }
+  .agent-explainer-card:hover { background: var(--card); }
+  .agent-number {
+    font-family: var(--font-display);
+    font-size: 64px; font-weight: 300;
+    color: rgba(255,255,255,0.04);
+    position: absolute; top: 8px; right: 16px;
+    line-height: 1;
+  }
+  .agent-explainer-name {
+    font-family: var(--font-mono); font-size: 10px;
+    letter-spacing: 0.12em; text-transform: uppercase;
+    color: var(--green); margin-bottom: 12px;
+  }
+  .agent-explainer-title {
+    font-family: var(--font-display);
+    font-size: 20px; font-weight: 400;
+    color: var(--cream); margin-bottom: 12px; line-height: 1.2;
+  }
+  .agent-explainer-desc {
+    font-size: 12px; color: var(--muted); line-height: 1.6;
+  }
+
+  /* ── AUDIT LOG ── */
+  .audit-table-wrap {
+    border: 1px solid var(--border);
+    border-radius: 2px; overflow: hidden;
+    margin-top: 48px;
+  }
+  .audit-table {
+    width: 100%; border-collapse: collapse;
+  }
+  .audit-table th {
+    text-align: left; padding: 14px 20px;
+    font-family: var(--font-mono); font-size: 9px;
+    letter-spacing: 0.14em; text-transform: uppercase;
+    color: var(--muted); border-bottom: 1px solid var(--border);
+    background: var(--dark);
+  }
+  .audit-table td {
+    padding: 14px 20px;
+    font-family: var(--font-mono); font-size: 11px;
+    color: var(--white); border-bottom: 1px solid var(--border);
+    vertical-align: top;
+  }
+  .audit-table tr:last-child td { border-bottom: none; }
+  .audit-table tr:hover td { background: rgba(255,255,255,0.01); }
+  .audit-tag {
+    display: inline-block; padding: 2px 8px;
+    border-radius: 100px; font-size: 9px;
+    letter-spacing: 0.1em; text-transform: uppercase;
+  }
+  .audit-tag.researcher { background: rgba(90,255,145,0.1); color: var(--green); }
+  .audit-tag.signal { background: rgba(232,224,204,0.1); color: var(--cream); }
+  .audit-tag.risk { background: rgba(255,179,68,0.1); color: var(--amber); }
+  .audit-tag.execution { background: rgba(255,255,255,0.06); color: var(--muted); }
+  .audit-tag.supervisor { background: rgba(90,255,145,0.06); color: var(--green); }
+
+  /* ── FOOTER ── */
+  footer {
+    padding: 60px 48px;
+    border-top: 1px solid var(--border);
+    display: flex; align-items: center; justify-content: space-between;
+  }
+  .footer-logo {
+    font-family: var(--font-display);
+    font-size: 18px; font-weight: 300;
+    color: var(--cream-dim);
+  }
+  .footer-copy {
+    font-family: var(--font-mono); font-size: 10px;
+    letter-spacing: 0.1em; color: var(--muted);
+  }
+  .footer-links { display: flex; gap: 24px; }
+  .footer-links a {
+    font-family: var(--font-mono); font-size: 10px;
+    letter-spacing: 0.1em; text-transform: uppercase;
+    color: var(--muted); text-decoration: none;
+    transition: color 0.2s;
+  }
+  .footer-links a:hover { color: var(--cream); }
+
+  /* ── DIVIDER ── */
+  .marquee-strip {
+    border-top: 1px solid var(--border);
+    border-bottom: 1px solid var(--border);
+    padding: 16px 0; overflow: hidden;
+    white-space: nowrap;
+  }
+  .marquee-inner {
+    display: inline-flex; gap: 48px;
+    animation: marquee 20s linear infinite;
+  }
+  .marquee-inner span {
+    font-family: var(--font-mono); font-size: 10px;
+    letter-spacing: 0.16em; text-transform: uppercase;
+    color: var(--muted);
+  }
+  .marquee-inner .dot-sep { color: var(--green); }
+  @keyframes marquee { to { transform: translateX(-50%); } }
+
+  /* ── EMPTY STATE ── */
+  .empty-state {
+    text-align: center; padding: 80px 40px;
+    color: var(--muted);
+  }
+  .empty-state-icon {
+    font-family: var(--font-display);
+    font-size: 64px; font-weight: 300;
+    color: rgba(255,255,255,0.05);
+    margin-bottom: 16px; line-height: 1;
+  }
+  .empty-state p {
+    font-family: var(--font-mono); font-size: 11px;
+    letter-spacing: 0.1em; text-transform: uppercase;
+  }
+
+  /* ── TOAST ── */
+  .toast {
+    position: fixed; bottom: 32px; right: 32px;
+    padding: 14px 24px;
+    border: 1px solid var(--green);
+    border-radius: 2px;
+    background: rgba(10,10,8,0.95);
+    color: var(--green);
+    font-family: var(--font-mono); font-size: 11px;
+    letter-spacing: 0.08em;
+    transform: translateY(80px); opacity: 0;
+    transition: all 0.3s ease;
+    z-index: 1000;
+  }
+  .toast.show { transform: translateY(0); opacity: 1; }
+
+  @media (max-width: 900px) {
+    nav { padding: 16px 24px; }
+    .nav-links { display: none; }
+    section { padding: 80px 24px; }
+    .hero { padding: 80px 24px 60px; }
+    .hero-stats { display: none; }
+    .pipeline-grid { grid-template-columns: 1fr; }
+    .metrics-strip { grid-template-columns: 1fr 1fr; }
+    .agents-explainer { grid-template-columns: 1fr; }
+    footer { flex-direction: column; gap: 24px; text-align: center; }
+  }
+</style>
+</head>
+<body>
+
+<!-- NAV -->
+<nav>
+  <div class="nav-logo">Alpha <span>Desk</span></div>
+  <div class="nav-links">
+    <a href="#pipeline">Pipeline</a>
+    <a href="#agents">Agents</a>
+    <a href="#audit">Audit Log</a>
+  </div>
+  <div class="nav-badge">
+    <div class="live-dot"></div>
+    <span>Paper Trading Mode</span>
+  </div>
+</nav>
+
+<!-- HERO -->
+<section class="hero">
+  <div class="hero-bg"></div>
+  <div class="hero-grid"></div>
+  <div class="hero-eyebrow">Agentic Trading System — v2.0</div>
+  <div class="hero-headline">Five Agents.<br><em>One Decision.</em></div>
+  <div class="hero-sub">From raw signal to audited execution —<br>orchestrated autonomy with accountability.</div>
+  <div class="hero-actions">
+    <a href="#pipeline" class="btn-primary">
+      <span class="dot"></span>Run Pipeline<span class="dot"></span>
+    </a>
+    <a href="#agents" class="btn-ghost">
+      <span class="dot"></span>How it works
+    </a>
+  </div>
+  <div class="hero-stats">
+    <div class="hero-stat">
+      <div class="hero-stat-value" id="stat-runs">0</div>
+      <div class="hero-stat-label">Pipeline Runs</div>
+    </div>
+    <div class="hero-stat">
+      <div class="hero-stat-value" id="stat-vetoes">0</div>
+      <div class="hero-stat-label">Risk Vetoes</div>
+    </div>
+    <div class="hero-stat">
+      <div class="hero-stat-value" id="stat-msgs">0</div>
+      <div class="hero-stat-label">Audit Entries</div>
+    </div>
+  </div>
+</section>
+
+<!-- MARQUEE -->
+<div class="marquee-strip">
+  <div class="marquee-inner">
+    <span>Macro Researcher</span><span class="dot-sep">◆</span>
+    <span>Alpha Signal</span><span class="dot-sep">◆</span>
+    <span>Risk Manager</span><span class="dot-sep">◆</span>
+    <span>Execution Agent</span><span class="dot-sep">◆</span>
+    <span>Compliance Supervisor</span><span class="dot-sep">◆</span>
+    <span>Hard Veto</span><span class="dot-sep">◆</span>
+    <span>Provenance Logging</span><span class="dot-sep">◆</span>
+    <span>Paper Trading Mode</span><span class="dot-sep">◆</span>
+    <span>Macro Researcher</span><span class="dot-sep">◆</span>
+    <span>Alpha Signal</span><span class="dot-sep">◆</span>
+    <span>Risk Manager</span><span class="dot-sep">◆</span>
+    <span>Execution Agent</span><span class="dot-sep">◆</span>
+    <span>Compliance Supervisor</span><span class="dot-sep">◆</span>
+    <span>Hard Veto</span><span class="dot-sep">◆</span>
+    <span>Provenance Logging</span><span class="dot-sep">◆</span>
+    <span>Paper Trading Mode</span><span class="dot-sep">◆</span>
+  </div>
+</div>
+
+<!-- METRICS -->
+<section>
+  <div class="section-label">System Status</div>
+  <div class="metrics-strip">
+    <div class="metric-cell">
+      <div class="metric-value green" id="m-runs">—</div>
+      <div class="metric-label">Total Pipeline Runs</div>
+    </div>
+    <div class="metric-cell">
+      <div class="metric-value" id="m-agents">5</div>
+      <div class="metric-label">Active Agents</div>
+    </div>
+    <div class="metric-cell">
+      <div class="metric-value amber" id="m-vetoes">—</div>
+      <div class="metric-label">Risk Vetoes Issued</div>
+    </div>
+    <div class="metric-cell">
+      <div class="metric-value" id="m-audit">—</div>
+      <div class="metric-label">Audit Log Entries</div>
+    </div>
+  </div>
+</section>
+
+<!-- PIPELINE -->
+<section id="pipeline">
+  <div class="section-label">Live Pipeline</div>
+  <div class="section-title">Run the <em>agent debate</em></div>
+  <br><br>
+  <div class="pipeline-grid">
+    <!-- Input -->
+    <div class="pipeline-input-panel">
+      <h3>Market Event Input</h3>
+      <div class="section-label" style="margin-bottom:12px">Quick select</div>
+      <div class="event-pills" id="event-pills"></div>
+
+      <div class="input-group">
+        <label>Event Headline</label>
+        <input type="text" id="inp-headline" placeholder="e.g. Fed signals rate hike..." />
+      </div>
+      <div class="input-group">
+        <label>Ticker</label>
+        <input type="text" id="inp-ticker" placeholder="e.g. AAPL" style="text-transform:uppercase;" />
+      </div>
+      <div class="input-group">
+        <label>Source</label>
+        <input type="text" id="inp-source" placeholder="e.g. Reuters" value="Reuters" />
+      </div>
+      <button class="run-btn" id="run-btn" onclick="runPipeline()">
+        <span class="dot" style="width:5px;height:5px;border-radius:50%;background:currentColor;"></span>
+        <span id="run-btn-label">Initiate Pipeline</span>
+        <span class="dot" style="width:5px;height:5px;border-radius:50%;background:currentColor;"></span>
+      </button>
+    </div>
+
+    <!-- Output -->
+    <div class="pipeline-output-panel">
+      <div class="agent-thread" id="agent-thread">
+        <!-- Populated by JS -->
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- AGENTS -->
+<section id="agents">
+  <div class="section-label">Architecture</div>
+  <div class="section-title">Meet the <em>five agents</em></div>
+  <div class="agents-explainer">
+    <div class="agent-explainer-card">
+      <div class="agent-number">1</div>
+      <div class="agent-explainer-name">Research</div>
+      <div class="agent-explainer-title">Macro / News Researcher</div>
+      <div class="agent-explainer-desc">Ingests headlines, filings, and macro data. Identifies regime shifts and surfaces directional signals with confidence scores.</div>
+    </div>
+    <div class="agent-explainer-card">
+      <div class="agent-number">2</div>
+      <div class="agent-explainer-name">Alpha</div>
+      <div class="agent-explainer-title">Signal Designer</div>
+      <div class="agent-explainer-desc">Translates research into concrete trade proposals — ticker, direction, size, entry, stop-loss — with backtested rationale.</div>
+    </div>
+    <div class="agent-explainer-card">
+      <div class="agent-number">3</div>
+      <div class="agent-explainer-name">Risk</div>
+      <div class="agent-explainer-title">Risk Manager</div>
+      <div class="agent-explainer-desc">Hard veto power. Enforces position limits, drawdown ceilings, and liquidity checks. Can reject or resize any trade.</div>
+    </div>
+    <div class="agent-explainer-card">
+      <div class="agent-number">4</div>
+      <div class="agent-explainer-name">Execution</div>
+      <div class="agent-explainer-title">Execution Agent</div>
+      <div class="agent-explainer-desc">Builds TWAP/VWAP execution strategies. Models slippage, child orders, and venue routing on the paper exchange.</div>
+    </div>
+    <div class="agent-explainer-card">
+      <div class="agent-number">5</div>
+      <div class="agent-explainer-name">Compliance</div>
+      <div class="agent-explainer-title">Supervisor Agent</div>
+      <div class="agent-explainer-desc">Audits the full decision chain. Logs provenance, checks regulatory rules, flags anomalies, and generates immutable audit IDs.</div>
+    </div>
+  </div>
+</section>
+
+<!-- AUDIT LOG -->
+<section id="audit">
+  <div class="section-label">Immutable Log</div>
+  <div class="section-title">Full <em>audit trail</em></div>
+  <div class="audit-table-wrap">
+    <table class="audit-table">
+      <thead>
+        <tr>
+          <th>Time</th>
+          <th>Agent</th>
+          <th>Message Type</th>
+          <th>ID</th>
+          <th>Summary</th>
+        </tr>
+      </thead>
+      <tbody id="audit-tbody">
+        <tr><td colspan="5">
+          <div class="empty-state">
+            <div class="empty-state-icon">∅</div>
+            <p>No audit entries yet — run the pipeline above</p>
+          </div>
+        </td></tr>
+      </tbody>
+    </table>
+  </div>
+</section>
+
+<!-- FOOTER -->
+<footer>
+  <div class="footer-logo">Tradecraft</div>
+  <div class="footer-copy">© 2025 — Paper Trading Only. Not financial advice.</div>
+  <div class="footer-links">
+    <a href="#pipeline">Pipeline</a>
+    <a href="#agents">Agents</a>
+    <a href="#audit">Audit</a>
+  </div>
+</footer>
+
+<div class="toast" id="toast"></div>
+
+<script>
+// ── Config ──────────────────────────────────────────────────────────────────
+const API = 'http://localhost:8000/api';
+let runCount = 0, vetoCount = 0, auditCount = 0;
+
+const AGENT_CONFIG = {
+  researcher:      { label: 'Researcher',  abbr: 'R' },
+  signal_agent:    { label: 'Signal Agent', abbr: 'S' },
+  risk_manager:    { label: 'Risk Manager', abbr: '⚡' },
+  execution_agent: { label: 'Execution',   abbr: 'E' },
+  supervisor:      { label: 'Supervisor',  abbr: '✓' },
+};
+
+const SAMPLE_EVENTS = [
+  { headline: 'AAPL warns of 6-8 week supply chain delays due to Taiwan fab disruption.', ticker: 'AAPL', source: 'Reuters' },
+  { headline: 'Fed minutes signal two additional rate hikes; inflation stickier than expected.', ticker: 'SPY', source: 'Federal Reserve' },
+  { headline: 'NVDA beats earnings by 18%; data center revenue up 3x YoY.', ticker: 'NVDA', source: 'NASDAQ Filing' },
+];
+
+// ── Init ────────────────────────────────────────────────────────────────────
+window.addEventListener('DOMContentLoaded', () => {
+  buildAgentThread();
+  buildEventPills();
+  loadAuditLog();
+  animateStats();
+});
+
+function buildEventPills() {
+  const container = document.getElementById('event-pills');
+  SAMPLE_EVENTS.forEach((ev, i) => {
+    const pill = document.createElement('div');
+    pill.className = 'event-pill';
+    pill.textContent = ev.ticker;
+    pill.title = ev.headline;
+    pill.onclick = () => {
+      document.querySelectorAll('.event-pill').forEach(p => p.classList.remove('active'));
+      pill.classList.add('active');
+      document.getElementById('inp-headline').value = ev.headline;
+      document.getElementById('inp-ticker').value = ev.ticker;
+      document.getElementById('inp-source').value = ev.source;
+    };
+    container.appendChild(pill);
+  });
+}
+
+function buildAgentThread() {
+  const container = document.getElementById('agent-thread');
+  container.innerHTML = '';
+  Object.entries(AGENT_CONFIG).forEach(([key, cfg], i) => {
+    if (i > 0) {
+      const conn = document.createElement('div');
+      conn.className = 'connector';
+      container.appendChild(conn);
+    }
+    const card = document.createElement('div');
+    card.className = 'agent-card';
+    card.id = `card-${key}`;
+    card.innerHTML = `
+      <div class="agent-header" onclick="toggleCard('${key}')">
+        <div class="agent-icon" id="icon-${key}">${cfg.abbr}</div>
+        <div class="agent-name">${cfg.label}</div>
+        <div class="agent-tag" id="tag-${key}">Waiting</div>
+      </div>
+      <div class="agent-body" id="body-${key}">
+        <div class="agent-payload" id="payload-${key}"></div>
+      </div>
+    `;
+    container.appendChild(card);
+  });
+}
+
+function toggleCard(key) {
+  const card = document.getElementById(`card-${key}`);
+  card.classList.toggle('expanded');
+}
+
+// ── Run Pipeline ─────────────────────────────────────────────────────────────
+async function runPipeline() {
+  const headline = document.getElementById('inp-headline').value.trim();
+  const ticker = document.getElementById('inp-ticker').value.trim().toUpperCase();
+  const source = document.getElementById('inp-source').value.trim();
+
+  if (!headline || !ticker) { showToast('Please enter a headline and ticker.'); return; }
+
+  const btn = document.getElementById('run-btn');
+  const label = document.getElementById('run-btn-label');
+  btn.disabled = true;
+  label.textContent = 'Running...';
+
+  // Reset all cards
+  buildAgentThread();
+
+  try {
+    // Try streaming first, fall back to mock
+    await runMockPipeline(headline, ticker, source);
+  } catch (e) {
+    console.warn('API not available, using mock mode:', e.message);
+    await runMockPipeline(headline, ticker, source);
+  }
+
+  runCount++;
+  document.getElementById('stat-runs').textContent = runCount;
+  document.getElementById('m-runs').textContent = runCount;
+  btn.disabled = false;
+  label.textContent = 'Run Again';
+  showToast('Pipeline complete — audit log updated');
+}
+
+// ── Mock pipeline (works without backend) ────────────────────────────────────
+const MOCK_DATA = {
+  researcher: {
+    signal: 'BEARISH', confidence: 0.78,
+    summary: 'Supply chain disruption detected. Material downside risk near-term.',
+    sources: ['Reuters', 'SEC Filing'], regime: 'RISK_OFF',
+  },
+  signal_agent: {
+    action: 'SHORT', ticker: '', size_pct: 8.0,
+    entry_price: 189.50, stop_loss: 193.00, take_profit: 182.00,
+    rationale: '5 similar events → -1.2% median 3-day move.', backtest_sharpe: 1.4,
+  },
+  risk_manager: {
+    verdict: 'APPROVED_WITH_CONDITIONS', veto: false,
+    adjusted_size_pct: 4.0,
+    reason: 'Scaled from 8% → 4% (single-stock limit). Drawdown headroom: 3.8%.',
+    risk_metrics: { position_limit_ok: true, drawdown_ok: true, liquidity_ok: true },
+  },
+  execution_agent: {
+    strategy: 'TWAP', duration_min: 30, child_orders: 6,
+    expected_slippage_bps: 4.2, venue: 'PAPER_EXCHANGE', status: 'SIMULATED_FILL',
+  },
+  supervisor: {
+    audit_status: 'COMPLIANT', circuit_breaker_triggered: false,
+    human_review_required: false, flags: [],
+    compliance_notes: 'Full decision chain verified. Risk limits honored.',
+    log_id: '',
+  },
+};
+
+const AGENT_ORDER = ['researcher','signal_agent','risk_manager','execution_agent','supervisor'];
+
+async function runMockPipeline(headline, ticker, source) {
+  const ticker_uc = ticker.toUpperCase();
+  const logId = `TRD-${Date.now().toString().slice(-6)}`;
+
+  for (const agentKey of AGENT_ORDER) {
+    setAgentState(agentKey, 'running', 'Processing...');
+    await delay(700 + Math.random() * 500);
+
+    const data = JSON.parse(JSON.stringify(MOCK_DATA[agentKey]));
+    if (agentKey === 'signal_agent') data.ticker = ticker_uc;
+    if (agentKey === 'supervisor') data.log_id = logId;
+
+    const tagText = getTagText(agentKey, data);
+    const tagClass = getTagClass(agentKey, data);
+
+    setAgentState(agentKey, 'done', tagText, tagClass, data);
+
+    if (agentKey === 'risk_manager' && data.veto) {
+      vetoCount++;
+      document.getElementById('stat-vetoes').textContent = vetoCount;
+      document.getElementById('m-vetoes').textContent = vetoCount;
+      setAgentState(agentKey, 'vetoed', 'VETOED', 'vetoed', data);
+      ['execution_agent','supervisor'].forEach(k => {
+        const card = document.getElementById(`card-${k}`);
+        if (card) card.style.display = 'none';
+      });
+      break;
+    }
+
+    // expand last card
+    const card = document.getElementById(`card-${agentKey}`);
+    if (card) { card.classList.add('expanded'); setTimeout(() => card.classList.remove('expanded'), 3000); }
+  }
+
+  // Update audit log display
+  auditCount += AGENT_ORDER.length;
+  document.getElementById('m-audit').textContent = auditCount;
+  appendToAuditDisplay(headline, ticker_uc, logId);
+}
+
+function setAgentState(key, state, tagText, tagClass='', payload=null) {
+  const card = document.getElementById(`card-${key}`);
+  const tag  = document.getElementById(`tag-${key}`);
+  if (!card || !tag) return;
+
+  card.className = `agent-card ${state}`;
+  tag.className  = `agent-tag ${tagClass}`;
+  tag.textContent = tagText;
+
+  if (payload) {
+    const payloadEl = document.getElementById(`payload-${key}`);
+    if (!payloadEl) return;
+    payloadEl.innerHTML = '';
+    const flat = flattenObj(payload);
+    Object.entries(flat).slice(0, 8).forEach(([k, v]) => {
+      const row = document.createElement('div');
+      row.className = 'payload-row';
+      const valClass = getValClass(k, v);
+      row.innerHTML = `<span class="payload-key">${k}</span><span class="payload-val ${valClass}">${String(v)}</span>`;
+      payloadEl.appendChild(row);
+    });
+  }
+}
+
+function flattenObj(obj, prefix='') {
+  const out = {};
+  for (const [k, v] of Object.entries(obj)) {
+    const key = prefix ? `${prefix}.${k}` : k;
+    if (v && typeof v === 'object' && !Array.isArray(v)) {
+      Object.assign(out, flattenObj(v, key));
+    } else {
+      out[key] = Array.isArray(v) ? v.join(', ') : v;
+    }
+  }
+  return out;
+}
+
+function getTagText(agentKey, data) {
+  if (agentKey === 'researcher') return data.signal || 'DONE';
+  if (agentKey === 'signal_agent') return data.action || 'DONE';
+  if (agentKey === 'risk_manager') return data.verdict?.split('_')[0] || 'DONE';
+  if (agentKey === 'execution_agent') return data.status || 'DONE';
+  if (agentKey === 'supervisor') return data.audit_status || 'DONE';
+  return 'DONE';
+}
+
+function getTagClass(agentKey, data) {
+  if (agentKey === 'researcher') return data.signal === 'BEARISH' ? 'bearish' : data.signal === 'BULLISH' ? 'bullish' : '';
+  if (agentKey === 'signal_agent') return data.action === 'SHORT' ? 'bearish' : 'bullish';
+  if (agentKey === 'risk_manager') return data.veto ? 'vetoed' : 'approved';
+  if (agentKey === 'execution_agent') return 'approved';
+  if (agentKey === 'supervisor') return data.audit_status === 'COMPLIANT' ? 'compliant' : 'warning';
+  return '';
+}
+
+function getValClass(key, val) {
+  const k = key.toLowerCase();
+  if (k.includes('veto') && val === true) return 'red';
+  if (k.includes('signal') && val === 'BEARISH') return 'red';
+  if (k.includes('signal') && val === 'BULLISH') return 'green';
+  if (k.includes('action') && val === 'SHORT') return 'red';
+  if (k.includes('action') && val === 'LONG') return 'green';
+  if (k.includes('status') && val === 'COMPLIANT') return 'green';
+  if (k.includes('sharpe') || k.includes('confidence')) return 'amber';
+  return '';
+}
+
+function appendToAuditDisplay(headline, ticker, logId) {
+  const tbody = document.getElementById('audit-tbody');
+  const now = new Date().toLocaleTimeString();
+  // Clear empty state
+  if (tbody.querySelector('.empty-state')) tbody.innerHTML = '';
+
+  const agents = ['researcher','signal_agent','risk_manager','execution_agent','supervisor'];
+  const types  = ['RESEARCH_SIGNAL','TRADE_PROPOSAL','RISK_DECISION','EXECUTION_PLAN','AUDIT_COMPLETE'];
+  const summaries = [
+    `Bearish on ${ticker} — supply disruption`,
+    `Proposed SHORT ${ticker} @ $189.50`,
+    'Approved w/ conditions — size scaled 8→4%',
+    'TWAP 30min / 6 child orders / paper fill',
+    `Compliant — ${logId}`,
+  ];
+
+  agents.forEach((ag, i) => {
+    const tr = document.createElement('tr');
+    tr.innerHTML = `
+      <td>${now}</td>
+      <td><span class="audit-tag ${ag.replace('_agent','').replace('_manager','')}">${ag}</span></td>
+      <td>${types[i]}</td>
+      <td style="font-family:var(--font-mono);font-size:10px;color:var(--muted);">${logId}-${i}</td>
+      <td style="color:var(--muted)">${summaries[i]}</td>
+    `;
+    tbody.insertBefore(tr, tbody.firstChild);
+  });
+}
+
+async function loadAuditLog() {
+  // On load, show empty state — entries appear after pipeline runs
+}
+
+function animateStats() {
+  ['stat-runs','stat-vetoes','stat-msgs'].forEach(id => {
+    document.getElementById(id).textContent = '0';
+  });
+}
+
+function showToast(msg) {
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.classList.add('show');
+  setTimeout(() => t.classList.remove('show'), 3000);
+}
+
+function delay(ms) { return new Promise(r => setTimeout(r, ms)); }
+</script>
+</body>
+</html>
