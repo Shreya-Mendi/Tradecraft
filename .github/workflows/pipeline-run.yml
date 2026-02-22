@@ -1,0 +1,121 @@
+name: Agentic Pipeline Run
+
+# Triggered by the frontend via GitHub REST API (workflow_dispatch)
+# or directly from the Actions tab for testing.
+on:
+  workflow_dispatch:
+    inputs:
+      headline:
+        description: 'Market event headline'
+        required: true
+        type: string
+      ticker:
+        description: 'Ticker symbol (e.g. AAPL)'
+        required: true
+        type: string
+      source:
+        description: 'Event source (e.g. Reuters)'
+        required: false
+        default: 'Unknown'
+        type: string
+      run_id:
+        description: 'Client-generated run ID for result polling'
+        required: true
+        type: string
+      model:
+        description: 'GitHub Models model to use'
+        required: false
+        default: 'openai/gpt-4o'
+        type: choice
+        options:
+          - openai/gpt-4o
+          - openai/gpt-4o-mini
+          - anthropic/claude-3-5-sonnet
+          - anthropic/claude-3-5-haiku
+          - meta/llama-3-3-70b-instruct
+          - google/gemini-2-0-flash
+
+permissions:
+  contents: write    # Push result JSON to data branch
+  models: read       # Call GitHub Models API
+
+jobs:
+  run-pipeline:
+    name: Run 5-Agent Trading Pipeline
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Python 3.11
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+          cache: pip
+
+      - name: Install Python dependencies
+        run: pip install -r backend/requirements.txt
+
+      - name: Run pipeline
+        id: pipeline
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GH_MODEL:     ${{ inputs.model }}
+        run: |
+          python backend/pipeline_runner.py \
+            --headline "${{ inputs.headline }}" \
+            --ticker   "${{ inputs.ticker }}" \
+            --source   "${{ inputs.source }}" \
+            --run-id   "${{ inputs.run_id }}" \
+            --model    "${{ inputs.model }}" \
+            --output   "frontend/public/data/pipeline-${{ inputs.run_id }}.json"
+
+      - name: Update runs index
+        run: |
+          python backend/update_runs_index.py \
+            --run-id   "${{ inputs.run_id }}" \
+            --ticker   "${{ inputs.ticker }}" \
+            --headline "${{ inputs.headline }}" \
+            --index    "frontend/public/data/runs-index.json"
+
+      # Commit results to data branch so the frontend can poll for them
+      - name: Commit results to data branch
+        run: |
+          git config user.name  "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+
+          # Fetch or create data branch
+          git fetch origin data --depth=1 2>/dev/null || true
+
+          if git show-ref --quiet refs/remotes/origin/data; then
+            git checkout -b data origin/data
+          else
+            git checkout --orphan data
+            git rm -rf . --quiet 2>/dev/null || true
+            mkdir -p public/data
+          fi
+
+          # Copy result files from the pipeline step (they were written to frontend/public/data/)
+          git checkout main -- frontend/public/data/ 2>/dev/null || true
+          mkdir -p public/data
+          cp frontend/public/data/pipeline-${{ inputs.run_id }}.json public/data/ 2>/dev/null || true
+          cp frontend/public/data/runs-index.json                    public/data/ 2>/dev/null || true
+
+          git add public/data/
+          git diff --staged --quiet && echo "No changes to commit" || \
+            git commit -m "pipeline: run ${{ inputs.run_id }} (${{ inputs.ticker }})"
+          git push origin data
+
+      # Trigger a re-deploy so the new data is served by GitHub Pages
+      - name: Trigger Pages redeploy
+        uses: actions/github-script@v7
+        with:
+          script: |
+            await github.rest.actions.createWorkflowDispatch({
+              owner:       context.repo.owner,
+              repo:        context.repo.repo,
+              workflow_id: 'deploy.yml',
+              ref:         'main',
+            });

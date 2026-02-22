@@ -1,0 +1,26 @@
+# Node
+node_modules/
+frontend/dist/
+frontend/.vite/
+
+# Python
+__pycache__/
+*.py[cod]
+*.pyo
+.venv/
+venv/
+*.egg-info/
+
+# Env & secrets — NEVER commit
+.env
+.env.*
+*.token
+
+# Logs & data (pipeline results are committed to the data branch, not main)
+logs/
+frontend/public/data/pipeline-*.json
+frontend/public/data/runs-index.json
+
+# OS
+.DS_Store
+Thumbs.db
