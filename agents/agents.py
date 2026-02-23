@@ -13,6 +13,16 @@ import json
 from agents.base import BaseAgent
 from core.bus import Message
 
+# RL position sizer — loaded once per process (persists Q-table across requests)
+try:
+    from rl.position_sizer import PositionSizer
+    from analytics.performance_tracker import PerformanceTracker
+    _rl_sizer   = PositionSizer()
+    _perf_tracker = PerformanceTracker()
+    _RL_ENABLED = True
+except Exception as _rl_err:
+    _RL_ENABLED = False
+
 
 # ── 1. Macro / News Researcher ────────────────────────────────────────────────
 
@@ -88,6 +98,33 @@ PORTFOLIO: {json.dumps(self.bus.get_state("portfolio", {"cash_pct": 100, "positi
 """
         result = self.think(prompt)
         result["based_on_signal_id"] = research_msg.message_id
+
+        # ── RL Position Sizing Override ───────────────────────────────────────
+        # The LLM proposes a size_pct based on its training, but the RL agent
+        # has learned from actual trade outcomes. We use the RL recommendation
+        # and preserve both values in the payload for full auditability.
+        if _RL_ENABLED:
+            try:
+                macro   = self.bus.get_state("macro_context", {})
+                perf    = _perf_tracker.get_summary()
+                rl_state = _rl_sizer.build_state(
+                    research_payload=research_msg.payload,
+                    macro_context=macro,
+                    performance_summary=perf,
+                )
+                llm_size_pct = float(result.get("size_pct", 2.0))
+                rl_size_pct  = _rl_sizer.recommend(rl_state)
+
+                # Store both for audit transparency
+                result["llm_size_pct"] = round(llm_size_pct, 2)
+                result["rl_size_pct"]  = round(rl_size_pct,  2)
+                result["size_pct"]     = round(rl_size_pct,  2)   # RL wins
+                result["rl_state_key"] = _rl_sizer.discretise(rl_state)
+                result["rl_epsilon"]   = round(_rl_sizer.epsilon, 4)
+            except Exception as _e:
+                # RL failure is non-fatal — keep the LLM's size
+                result["rl_error"] = str(_e)
+
         return self.post("TRADE_PROPOSAL", result, in_reply_to=research_msg.message_id)
 
 

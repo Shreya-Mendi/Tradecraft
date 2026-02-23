@@ -46,18 +46,38 @@ function runResearcher(event) {
 function runSignalAgent(event, researchPayload) {
   const profile = getProfile(event.ticker);
   const confidence = researchPayload.confidence;
-  const size = parseFloat(Math.min(confidence * 12, 8).toFixed(1));
+  const llmSize = parseFloat(Math.min(confidence * 12, 8).toFixed(1));
+
+  // Simulate RL sizing: conservative when uncertain, larger with high confidence
+  // Buckets mirror rl/position_sizer.py discretise() logic
+  const confBucket = confidence >= 0.75 ? 'high' : confidence >= 0.5 ? 'med' : 'low';
+  const regimeBucket = researchPayload.regime === 'RISK_ON' ? 'on'
+    : researchPayload.regime === 'RISK_OFF' ? 'off' : 'neutral';
+  const RL_POLICY = {
+    'high|on':      4.0, 'high|neutral': 3.0, 'high|off':     2.0,
+    'med|on':       3.0, 'med|neutral':  2.0, 'med|off':      1.0,
+    'low|on':       2.0, 'low|neutral':  1.0, 'low|off':      1.0,
+  };
+  const rlSize = RL_POLICY[`${confBucket}|${regimeBucket}`] ?? 2.0;
+  const stateKey = `${confBucket}|${regimeBucket}|ok|normal`;
+  // Epsilon decays as runs accumulate — mock 200 steps → ε ≈ 0.07
+  const epsilon = parseFloat((Math.max(0.02, 0.15 * Math.pow(0.995, 200))).toFixed(4));
+
   return {
-    action:             researchPayload.signal === 'BULLISH' ? 'LONG' : researchPayload.signal === 'BEARISH' ? 'SHORT' : 'HOLD',
-    ticker:             event.ticker.toUpperCase(),
-    size_pct:           size,
-    entry_price:        profile.price,
-    stop_loss:          profile.stop,
-    take_profit:        profile.tp,
-    rationale:          `${researchPayload.summary.slice(0, 80)}... Pattern match: 5 similar events → ${profile.bias === 'BULLISH' ? '+' : '-'}1.2% median 3-day move.`,
-    backtest_sharpe:    profile.sharpe,
+    action:              researchPayload.signal === 'BULLISH' ? 'LONG' : researchPayload.signal === 'BEARISH' ? 'SHORT' : 'HOLD',
+    ticker:              event.ticker.toUpperCase(),
+    size_pct:            rlSize,
+    llm_size_pct:        llmSize,
+    rl_size_pct:         rlSize,
+    rl_state_key:        stateKey,
+    rl_epsilon:          epsilon,
+    entry_price:         profile.price,
+    stop_loss:           profile.stop,
+    take_profit:         profile.tp,
+    rationale:           `${researchPayload.summary.slice(0, 80)}... Pattern match: 5 similar events → ${profile.bias === 'BULLISH' ? '+' : '-'}1.2% median 3-day move.`,
+    backtest_sharpe:     profile.sharpe,
     expected_return_pct: parseFloat(((profile.tp - profile.price) / profile.price * 100).toFixed(2)),
-    based_on_signal_id: 'mock-res-001',
+    based_on_signal_id:  'mock-res-001',
   };
 }
 

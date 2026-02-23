@@ -17,6 +17,7 @@ import json
 import os
 import sys
 import random
+import uuid
 
 # Resolve imports from project root
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
@@ -24,6 +25,9 @@ sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 from orchestrator import run_pipeline, SAMPLE_EVENTS
 from lob.lob import LimitOrderBook
 from lob.execution_bridge import simulate_execution, SimulationResult
+from analytics.performance_tracker import PerformanceTracker
+
+_tracker = PerformanceTracker()
 
 
 # ── CLI ───────────────────────────────────────────────────────────────────────
@@ -230,6 +234,24 @@ def main():
         print(f"  Compliance Audit : {supervisor.get('audit_status', 'N/A')}")
         print(f"  Log ID           : {supervisor.get('log_id', 'N/A')}")
         print(f"  Human Review?    : {supervisor.get('human_review_required', 'N/A')}")
+
+    # ── Record to performance tracker ─────────────────────────────────────────
+    pipeline_results["event"] = event
+    run_id = f"lob-{uuid.uuid4().hex[:8]}"
+    trade = _tracker.record(pipeline_results, sim_result=sim, run_id=run_id)
+    perf_summary = _tracker.get_summary()
+    print(f"\n  ── Performance Record {'─'*47}")
+    print(f"  Run ID         : {run_id}")
+    print(f"  Outcome        : {trade.outcome}  ({trade.pnl_bps:+.2f} bps est.)")
+    print(f"  P&L USD        : ${trade.pnl_usd:+,.2f}")
+    print(f"  ── Running Totals {'─'*51}")
+    print(f"  All-time runs  : {perf_summary['total_runs']}")
+    print(f"  Win rate       : {perf_summary['win_rate_pct']:.0f}%")
+    print(f"  Cumul. P&L     : {perf_summary['cum_pnl_bps']:+.2f} bps  (${perf_summary['cum_pnl_usd']:+,.0f})")
+    print(f"  Sharpe ratio   : {perf_summary['sharpe_ratio']:.3f}")
+    print(f"  Max drawdown   : {perf_summary['max_drawdown_bps']:.2f} bps")
+    print(f"  Avg slippage   : {perf_summary['avg_slippage_bps']:.2f} bps")
+    print(f"  Trades file    : logs/trades.jsonl")
 
     print(f"\n{'═'*70}\n")
 

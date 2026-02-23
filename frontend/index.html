@@ -218,6 +218,22 @@
   .footer-links a { font-family: var(--font-mono); font-size: 10px; letter-spacing: 0.1em; text-transform: uppercase; color: var(--muted); text-decoration: none; transition: color 0.2s; }
   .footer-links a:hover { color: var(--cream); }
 
+  /* ── PERFORMANCE PANEL ── */
+  .perf-panel { border: 1px solid var(--border); border-radius: 2px; padding: 32px 36px; background: var(--card); }
+  .perf-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 28px; }
+  .perf-mock-badge { font-family: var(--font-mono); font-size: 9px; letter-spacing: 0.12em; text-transform: uppercase; color: var(--amber); border: 1px solid var(--amber-dim); padding: 3px 8px; border-radius: 100px; }
+  .perf-live-badge  { font-family: var(--font-mono); font-size: 9px; letter-spacing: 0.12em; text-transform: uppercase; color: var(--green); border: 1px solid var(--green-dim); padding: 3px 8px; border-radius: 100px; }
+  .perf-grid { display: grid; grid-template-columns: repeat(6, 1fr); gap: 0; border: 1px solid var(--border); border-radius: 2px; overflow: hidden; }
+  .perf-cell { padding: 24px 20px; border-right: 1px solid var(--border); transition: background 0.2s; }
+  .perf-cell:last-child { border-right: none; }
+  .perf-cell:hover { background: rgba(255,255,255,0.02); }
+  .perf-value { font-family: var(--font-display); font-size: 28px; font-weight: 300; color: var(--cream); line-height: 1; margin-bottom: 6px; }
+  .perf-label { font-family: var(--font-mono); font-size: 9px; letter-spacing: 0.12em; text-transform: uppercase; color: var(--muted); }
+  .perf-sub { display: flex; align-items: center; gap: 12px; margin-top: 16px; font-family: var(--font-mono); font-size: 10px; color: var(--muted); }
+  .perf-dot { color: var(--green); font-size: 8px; }
+  /* RL signal-agent card highlight */
+  .rl-badge { display: inline-block; font-family: var(--font-mono); font-size: 9px; padding: 2px 7px; border-radius: 100px; border: 1px solid rgba(90,255,145,0.3); color: var(--green); background: rgba(90,255,145,0.07); margin-left: 6px; }
+
   @media (max-width: 900px) {
     nav { padding: 16px 24px; }
     .nav-links { display: none; }
@@ -226,6 +242,7 @@
     .hero-stats { display: none; }
     .pipeline-grid { grid-template-columns: 1fr; }
     .metrics-strip { grid-template-columns: 1fr 1fr; }
+    .perf-grid { grid-template-columns: repeat(3, 1fr); }
     .agents-explainer { grid-template-columns: 1fr; }
     footer { flex-direction: column; gap: 24px; text-align: center; }
   }
@@ -257,6 +274,7 @@
   <div class="nav-logo">Alpha <span>Desk</span></div>
   <div class="nav-links">
     <a href="#pipeline">Pipeline</a>
+    <a href="#performance">Performance</a>
     <a href="#agents">Agents</a>
     <a href="#audit">Audit Log</a>
   </div>
@@ -296,6 +314,7 @@
     <span>Execution Agent</span><span class="dot-sep">◆</span>
     <span>Compliance Supervisor</span><span class="dot-sep">◆</span>
     <span>GitHub Models</span><span class="dot-sep">◆</span>
+    <span>Q-Table RL Sizing</span><span class="dot-sep">◆</span>
     <span>Hard Veto</span><span class="dot-sep">◆</span>
     <span>Provenance Logging</span><span class="dot-sep">◆</span>
     <span>Macro Researcher</span><span class="dot-sep">◆</span>
@@ -304,6 +323,7 @@
     <span>Execution Agent</span><span class="dot-sep">◆</span>
     <span>Compliance Supervisor</span><span class="dot-sep">◆</span>
     <span>GitHub Models</span><span class="dot-sep">◆</span>
+    <span>Q-Table RL Sizing</span><span class="dot-sep">◆</span>
     <span>Hard Veto</span><span class="dot-sep">◆</span>
     <span>Provenance Logging</span><span class="dot-sep">◆</span>
   </div>
@@ -317,6 +337,39 @@
     <div class="metric-cell"><div class="metric-value" id="m-agents">5</div><div class="metric-label">Active Agents</div></div>
     <div class="metric-cell"><div class="metric-value amber" id="m-vetoes">—</div><div class="metric-label">Risk Vetoes Issued</div></div>
     <div class="metric-cell"><div class="metric-value" id="m-audit">—</div><div class="metric-label">Audit Log Entries</div></div>
+  </div>
+</section>
+
+<!-- PERFORMANCE -->
+<section id="performance">
+  <div class="section-label">Reinforcement Learning</div>
+  <div class="section-title">RL <em>position sizer</em></div>
+  <br>
+  <p style="font-family:var(--font-mono);font-size:11px;color:var(--muted);line-height:1.8;max-width:640px;margin-bottom:40px;">
+    A Q-table ε-greedy agent replaces the LLM's hallucinated <code style="color:var(--amber)">size_pct</code> with a
+    learned policy that maximises realised P&amp;L bps over time.
+    State: <code style="color:var(--cream)">(confidence, regime, drawdown, VIX)</code> ·
+    Actions: <code style="color:var(--green)">1–5% of NAV</code> ·
+    α=0.1 · γ=0.9 · ε decays 0.15→0.02
+  </p>
+  <div class="perf-panel" id="perf-panel">
+    <div class="perf-header">
+      <span class="section-label" style="margin-bottom:0">RL Performance</span>
+      <span class="perf-mock-badge">loading…</span>
+    </div>
+    <div class="perf-grid">
+      <div class="perf-cell"><div class="perf-value">—</div><div class="perf-label">Win Rate</div></div>
+      <div class="perf-cell"><div class="perf-value">—</div><div class="perf-label">Cumulative P&amp;L</div></div>
+      <div class="perf-cell"><div class="perf-value">—</div><div class="perf-label">Sharpe Ratio</div></div>
+      <div class="perf-cell"><div class="perf-value">—</div><div class="perf-label">Max Drawdown</div></div>
+      <div class="perf-cell"><div class="perf-value">—</div><div class="perf-label">RL Adoption</div></div>
+      <div class="perf-cell"><div class="perf-value">—</div><div class="perf-label">Avg Slippage</div></div>
+    </div>
+    <div class="perf-sub">
+      <span>0 executed</span><span class="perf-dot">◆</span>
+      <span>0 vetoed</span><span class="perf-dot">◆</span>
+      <span>Q-table ε-greedy · tabular RL</span>
+    </div>
   </div>
 </section>
 

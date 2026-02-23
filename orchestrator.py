@@ -25,6 +25,9 @@ from agents.agents import (
     ExecutionAgent,
     SupervisorAgent,
 )
+from analytics.performance_tracker import PerformanceTracker
+
+_tracker = PerformanceTracker()
 
 
 # ── Sample Market Events (swap these out for real data later) ─────────────────
@@ -64,9 +67,20 @@ def run_pipeline(event: dict, verbose: bool = True) -> dict:
     # ── Initialize bus with shared context ───────────────────────────────────
     bus = MessageBus(log_path="logs/audit.jsonl")
 
-    # Seed shared state
+    # Inject live market data if available (--live flag or live_price already in event)
+    live_context = {}
+    if event.get("live_price") or os.getenv("LIVE_DATA", "").lower() == "1":
+        try:
+            from data.market_feed import get_live_market_context
+            live_context = get_live_market_context(event.get("ticker", "SPY"))
+            print(f"  [live] Price: ${live_context['market_conditions']['live_price']}  "
+                  f"VIX: {live_context['macro_context']['vix']}")
+        except Exception as exc:
+            print(f"  [live] Market feed unavailable ({exc}) — using defaults")
+
+    # Seed shared state (live data overrides defaults where available)
     bus.set_state("market_event", json.dumps(event))
-    bus.set_state("macro_context", {"fed_rate": 5.25, "vix": 18.4, "regime": "LATE_CYCLE"})
+    bus.set_state("macro_context", live_context.get("macro_context", {"fed_rate": 5.25, "vix": 18.4, "regime": "LATE_CYCLE"}))
     bus.set_state("portfolio", {
         "cash_pct": 35,
         "positions": [
@@ -80,11 +94,11 @@ def run_pipeline(event: dict, verbose: bool = True) -> dict:
         "max_drawdown_pct": 10,
         "max_portfolio_gross_pct": 150,
     })
-    bus.set_state("market_conditions", {
+    bus.set_state("market_conditions", live_context.get("market_conditions", {
         "volatility": "elevated",
         "spread_bps": 5,
         "adv_30d_usd": 85_000_000,
-    })
+    }))
 
     # ── Initialize agents ────────────────────────────────────────────────────
     agents = [
@@ -133,11 +147,39 @@ def run_pipeline(event: dict, verbose: bool = True) -> dict:
     print(f"  Audit file     : logs/audit.jsonl")
     print("─" * 70 + "\n")
 
+    # ── Record to performance tracker ─────────────────────────────────────────
+    import uuid
+    results["event"] = event
+    trade = _tracker.record(results, sim_result=None, run_id=f"cli-{uuid.uuid4().hex[:8]}")
+    print(f"  Performance    : {trade.outcome}  ({trade.pnl_bps:+.1f} bps est.)")
+    summary = _tracker.get_summary()
+    print(f"  All-time P&L   : {summary['cum_pnl_bps']:+.1f} bps  |  Win rate: {summary['win_rate_pct']:.0f}%  |  Sharpe: {summary['sharpe_ratio']:.2f}")
+    print("─" * 70 + "\n")
+
     return results
 
 
 if __name__ == "__main__":
-    # Run the pipeline on the first sample event
-    event_idx = int(sys.argv[1]) if len(sys.argv) > 1 else 0
-    event = SAMPLE_EVENTS[event_idx % len(SAMPLE_EVENTS)]
+    import argparse as _ap
+    _p = _ap.ArgumentParser()
+    _p.add_argument("event_idx", nargs="?", type=int, default=0,
+                    help="Sample event index (0, 1, …)")
+    _p.add_argument("--live", action="store_true",
+                    help="Fetch real prices and headlines via yfinance + RSS")
+    _p.add_argument("--ticker", type=str, default=None,
+                    help="Override ticker for --live mode")
+    _args = _p.parse_args()
+
+    if _args.live:
+        try:
+            from data.market_feed import get_live_event
+            _ticker = _args.ticker or SAMPLE_EVENTS[_args.event_idx % len(SAMPLE_EVENTS)]["ticker"]
+            event = get_live_event(_ticker)
+            print(f"  [live] Fetched event for {_ticker}: {event['headline'][:80]}")
+        except ImportError:
+            print("  [live] yfinance/feedparser not installed — using sample event")
+            event = SAMPLE_EVENTS[_args.event_idx % len(SAMPLE_EVENTS)]
+    else:
+        event = SAMPLE_EVENTS[_args.event_idx % len(SAMPLE_EVENTS)]
+
     results = run_pipeline(event)

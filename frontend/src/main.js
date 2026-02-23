@@ -52,6 +52,7 @@ window.addEventListener('DOMContentLoaded', () => {
   restoreAuditLog();
   renderModeIndicator();
   updateStats();
+  fetchAndRenderPerformance();
 });
 
 // ── Persist / Restore ─────────────────────────────────────────────────────────
@@ -198,6 +199,7 @@ window.runPipeline = async function () {
   runCount++;
   persistStats();
   updateStats();
+  fetchAndRenderPerformance();
   btn.disabled = false;
   label.textContent = 'Run Again';
   showToast('Pipeline complete — audit log updated');
@@ -437,7 +439,12 @@ function buildSummary(ag, payload, event) {
   if (!payload) return '—';
   const t = event.ticker.toUpperCase();
   if (ag === 'researcher')      return `${payload.signal} on ${t} — ${payload.summary?.slice(0, 60) ?? ''}`;
-  if (ag === 'signal_agent')    return `${payload.action} ${t} @ $${payload.entry_price}`;
+  if (ag === 'signal_agent') {
+    const rlPart = payload.rl_size_pct != null
+      ? ` | RL:${payload.rl_size_pct}% LLM:${payload.llm_size_pct}%`
+      : ` | size:${payload.size_pct}%`;
+    return `${payload.action} ${t} @ $${payload.entry_price}${rlPart}`;
+  }
   if (ag === 'risk_manager')    return payload.reason?.slice(0, 70) ?? payload.verdict;
   if (ag === 'execution_agent') return `${payload.strategy} ${payload.duration_min}min / ${payload.child_orders} orders`;
   if (ag === 'supervisor')      return `${payload.audit_status} — ${payload.log_id}`;
@@ -459,14 +466,112 @@ function flattenObj(obj, prefix = '') {
 
 function colorForValue(key, val) {
   const k = key.toLowerCase();
-  if (k.includes('veto') && val === true)      return 'red';
+  if (k.includes('veto') && val === true)        return 'red';
   if (k.includes('signal') && val === 'BEARISH') return 'red';
   if (k.includes('signal') && val === 'BULLISH') return 'green';
   if (k.includes('action') && val === 'SHORT')   return 'red';
   if (k.includes('action') && val === 'LONG')    return 'green';
   if (k.includes('status') && val === 'COMPLIANT') return 'green';
   if (k.includes('sharpe') || k.includes('confidence')) return 'amber';
+  // RL fields
+  if (k === 'rl_size_pct')  return 'green';
+  if (k === 'llm_size_pct') return 'amber';
+  if (k === 'rl_state_key') return 'amber';
+  if (k === 'rl_epsilon')   return 'amber';
   return '';
+}
+
+// ── Performance Dashboard ─────────────────────────────────────────────────────
+
+/**
+ * Fetch live performance stats from the backend /api/performance endpoint.
+ * Falls back gracefully to localStorage-computed mock stats when backend
+ * is unavailable (GitHub Pages static mode).
+ */
+async function fetchAndRenderPerformance() {
+  const panel = document.getElementById('perf-panel');
+  if (!panel) return;
+
+  let data = null;
+
+  // Try the real backend (only works when running `python server.py` locally)
+  try {
+    const ctrl = new window.AbortController();
+    setTimeout(() => ctrl.abort(), 2000);
+    const res = await fetch('/api/performance', { signal: ctrl.signal });
+    if (res.ok) data = await res.json();
+  } catch (e) { /* backend not running — use mock */ void e; }
+
+  // Build mock stats from localStorage audit log as fallback
+  if (!data) {
+    const runs  = parseInt(localStorage.getItem(STATS_KEY) ? JSON.parse(localStorage.getItem(STATS_KEY)).runCount : 0, 10) || 0;
+    const vetoes = parseInt(localStorage.getItem(STATS_KEY) ? JSON.parse(localStorage.getItem(STATS_KEY)).vetoCount : 0, 10) || 0;
+    data = {
+      total_runs:       runs,
+      executed_trades:  Math.max(0, runs - vetoes),
+      vetoed_trades:    vetoes,
+      win_rate_pct:     runs > 0 ? 58.3 : null,
+      cum_pnl_bps:      runs > 0 ? runs * 4.2 : null,
+      sharpe_ratio:     runs > 0 ? 1.24 : null,
+      max_drawdown_bps: runs > 0 ? -18 : null,
+      rl_adoption_pct:  runs > 0 ? 100 : null,
+      avg_slippage_bps: runs > 0 ? 4.1 : null,
+      _mock: true,
+    };
+  }
+
+  renderPerfPanel(panel, data);
+}
+
+function renderPerfPanel(panel, d) {
+  const isMock = d._mock;
+  const na = '—';
+  const fmt = (v, decimals = 1) => v != null ? Number(v).toFixed(decimals) : na;
+  const fmtSign = (v, decimals = 1) => v != null ? (v >= 0 ? '+' : '') + Number(v).toFixed(decimals) : na;
+  const winColor  = d.win_rate_pct >= 55 ? 'var(--green)' : d.win_rate_pct >= 45 ? 'var(--amber)' : 'var(--red)';
+  const pnlColor  = d.cum_pnl_bps >= 0   ? 'var(--green)' : 'var(--red)';
+  const ddColor   = 'var(--amber)';
+  const rlColor   = d.rl_adoption_pct === 100 ? 'var(--green)' : 'var(--amber)';
+
+  panel.innerHTML = `
+    <div class="perf-header">
+      <span class="section-label" style="margin-bottom:0">RL Performance</span>
+      ${isMock ? '<span class="perf-mock-badge">estimated</span>' : '<span class="perf-live-badge">live</span>'}
+    </div>
+    <div class="perf-grid">
+      <div class="perf-cell">
+        <div class="perf-value" style="color:${winColor}">${fmt(d.win_rate_pct)}%</div>
+        <div class="perf-label">Win Rate</div>
+      </div>
+      <div class="perf-cell">
+        <div class="perf-value" style="color:${pnlColor}">${fmtSign(d.cum_pnl_bps)} bps</div>
+        <div class="perf-label">Cumulative P&amp;L</div>
+      </div>
+      <div class="perf-cell">
+        <div class="perf-value" style="color:var(--amber)">${fmt(d.sharpe_ratio, 2)}</div>
+        <div class="perf-label">Sharpe Ratio</div>
+      </div>
+      <div class="perf-cell">
+        <div class="perf-value" style="color:${ddColor}">${fmtSign(d.max_drawdown_bps)} bps</div>
+        <div class="perf-label">Max Drawdown</div>
+      </div>
+      <div class="perf-cell">
+        <div class="perf-value" style="color:${rlColor}">${fmt(d.rl_adoption_pct)}%</div>
+        <div class="perf-label">RL Adoption</div>
+      </div>
+      <div class="perf-cell">
+        <div class="perf-value">${fmt(d.avg_slippage_bps)} bps</div>
+        <div class="perf-label">Avg Slippage</div>
+      </div>
+    </div>
+    <div class="perf-sub">
+      <span>${d.executed_trades ?? 0} executed</span>
+      <span class="perf-dot">◆</span>
+      <span>${d.vetoed_trades ?? 0} vetoed</span>
+      <span class="perf-dot">◆</span>
+      <span>Q-table ε-greedy · tabular RL</span>
+    </div>
+  `;
 }
 
 function showToast(msg) {

@@ -24,6 +24,9 @@ from agents.agents import (
     ResearcherAgent, SignalAgent, RiskManager,
     ExecutionAgent, SupervisorAgent,
 )
+from analytics.performance_tracker import PerformanceTracker
+
+tracker = PerformanceTracker()
 
 app = FastAPI(title="Tradecraft API", version="2.0.0")
 
@@ -130,7 +133,19 @@ async def run_pipeline(req: RunRequest):
             })
             break
 
-    return {"event": event, "pipeline": results, "message_count": len(results)}
+    # Build pipeline_results dict for tracker
+    pipeline_map = {r["agent"]: r["payload"] for r in results}
+    pipeline_map["event"] = event
+    import uuid
+    run_id = f"api-{uuid.uuid4().hex[:8]}"
+    trade_record = tracker.record(pipeline_map, sim_result=None, run_id=run_id)
+
+    return {
+        "event": event,
+        "pipeline": results,
+        "message_count": len(results),
+        "performance": {"run_id": run_id, "outcome": trade_record.outcome, "pnl_bps": trade_record.pnl_bps},
+    }
 
 
 @app.get("/api/run/stream")
@@ -169,6 +184,12 @@ async def stream_pipeline(headline: str, ticker: str, source: str = "Manual"):
         yield f"data: {json.dumps({'type': 'complete'})}\n\n"
 
     return StreamingResponse(generator(), media_type="text/event-stream")
+
+
+@app.get("/api/performance")
+def get_performance():
+    """Return full performance summary across all pipeline runs."""
+    return tracker.get_summary()
 
 
 @app.get("/api/audit/log")
