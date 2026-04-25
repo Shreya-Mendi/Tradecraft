@@ -45,12 +45,12 @@ const SAMPLE_EVENTS = [
 
 // ── Bootstrap ─────────────────────────────────────────────────────────────────
 
-window.addEventListener('DOMContentLoaded', () => {
+window.addEventListener('DOMContentLoaded', async () => {
   loadPersistedStats();
   buildAgentThread();
   buildEventPills();
   restoreAuditLog();
-  renderModeIndicator();
+  await renderModeIndicator();
   updateStats();
   fetchAndRenderPerformance();
 });
@@ -192,8 +192,19 @@ window.runPipeline = async function () {
     label.textContent = 'Dispatching to GitHub Actions…';
     await runRealPipeline(event, token, label);
   } else {
-    label.textContent = 'Running (mock)…';
-    await runLocalMock(event);
+    const backendUp = await checkBackend();
+    if (backendUp) {
+      label.textContent = 'Running via FastAPI…';
+      try {
+        await runFastApiPipeline(event, label);
+      } catch (err) {
+        showToast(`Backend error — falling back to mock. (${err.message})`);
+        await runLocalMock(event);
+      }
+    } else {
+      label.textContent = 'Running (mock)…';
+      await runLocalMock(event);
+    }
   }
 
   runCount++;
@@ -204,6 +215,82 @@ window.runPipeline = async function () {
   label.textContent = 'Run Again';
   showToast('Pipeline complete — audit log updated');
 };
+
+// ── Backend health check ──────────────────────────────────────────────────────
+
+async function checkBackend() {
+  try {
+    const ctrl = new AbortController();
+    setTimeout(() => ctrl.abort(), 1500);
+    const res = await fetch('/api/health', { signal: ctrl.signal });
+    return res.ok;
+  } catch {
+    return false;
+  }
+}
+
+// ── FastAPI SSE pipeline ──────────────────────────────────────────────────────
+
+async function runFastApiPipeline(event, label) {
+  return new Promise((resolve, reject) => {
+    const params = new URLSearchParams({
+      headline: event.headline,
+      ticker:   event.ticker,
+      source:   event.source || 'Manual',
+    });
+
+    const es = new EventSource(`/api/run/stream?${params}`);
+    const allPayloads = {};
+    let vetoed = false;
+
+    es.onmessage = (e) => {
+      const data = JSON.parse(e.data);
+
+      if (data.type === 'start') {
+        label.textContent = 'Agents running…';
+        return;
+      }
+
+      if (data.type === 'agent_result') {
+        const key     = data.agent;
+        const payload = data.payload;
+        allPayloads[key] = payload;
+
+        if (key === 'risk_manager' && payload.veto) {
+          vetoed = true;
+          vetoCount++;
+          setAgentState(key, 'vetoed', 'VETOED', 'vetoed', payload);
+          ['execution_agent', 'supervisor'].forEach(k => {
+            const c = document.getElementById(`card-${k}`);
+            if (c) c.style.display = 'none';
+          });
+        } else {
+          setAgentState(key, 'done', deriveTagText(key, payload), deriveTagClass(key, payload), payload);
+        }
+
+        const card = document.getElementById(`card-${key}`);
+        if (card) {
+          card.classList.add('expanded');
+          setTimeout(() => card.classList.remove('expanded'), 3000);
+        }
+        return;
+      }
+
+      if (data.type === 'complete') {
+        es.close();
+        const logId = allPayloads.supervisor?.log_id ?? `TRD-API-${Date.now()}`;
+        persistAuditEntries(event, allPayloads, logId, vetoed);
+        label.textContent = 'Pipeline complete';
+        resolve();
+      }
+    };
+
+    es.onerror = () => {
+      es.close();
+      reject(new Error('SSE stream failed'));
+    };
+  });
+}
 
 // ── Real pipeline (GitHub Actions + GitHub Models) ────────────────────────────
 
@@ -359,15 +446,21 @@ function updateStats() {
 
 // ── Token modal ───────────────────────────────────────────────────────────────
 
-function renderModeIndicator() {
+async function renderModeIndicator() {
   const badge = document.getElementById('mode-badge');
   if (!badge) return;
   if (hasToken()) {
     badge.textContent = 'GitHub Models';
     badge.classList.add('live');
   } else {
-    badge.textContent = 'Mock Mode';
-    badge.classList.remove('live');
+    const backendUp = await checkBackend();
+    if (backendUp) {
+      badge.textContent = 'FastAPI Live';
+      badge.classList.add('live');
+    } else {
+      badge.textContent = 'Mock Mode';
+      badge.classList.remove('live');
+    }
   }
 }
 

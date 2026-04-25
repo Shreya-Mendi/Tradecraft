@@ -17,6 +17,8 @@ def call_llm(system_prompt: str, user_message: str, model: Optional[str] = None)
         return _call_anthropic(system_prompt, user_message, model)
     elif LLM_PROVIDER == "openai":
         return _call_openai(system_prompt, user_message, model)
+    elif LLM_PROVIDER == "groq":
+        return _call_groq(system_prompt, user_message, model)
     else:
         return _call_mock(system_prompt, user_message)
 
@@ -46,6 +48,23 @@ def _call_openai(system_prompt: str, user_message: str, model: Optional[str]) ->
             {"role": "system", "content": system_prompt},
             {"role": "user", "content": user_message},
         ],
+    )
+    return response.choices[0].message.content
+
+
+# ── Groq (free tier — llama-3.3-70b-versatile) ───────────────────────────────
+
+def _call_groq(system_prompt: str, user_message: str, model: Optional[str]) -> str:
+    from groq import Groq
+    client = Groq(api_key=os.getenv("GROQ_API_KEY"))
+    response = client.chat.completions.create(
+        model=model or "llama-3.3-70b-versatile",
+        messages=[
+            {"role": "system", "content": system_prompt},
+            {"role": "user",   "content": user_message},
+        ],
+        temperature=0.3,
+        max_tokens=1024,
     )
     return response.choices[0].message.content
 
