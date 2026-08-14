@@ -1,5 +1,7 @@
 # Tradecraft — Agentic Trading System v2.0
 
+🔗 **Live demo:** [shreya-mendi.github.io/Tradecraft/](https://shreya-mendi.github.io/Tradecraft/)
+
 > Five specialized AI agents that research, signal, risk-check, execute, and audit trades — with a polished dark-luxury dashboard.
 
 ---
